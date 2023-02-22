@@ -1,10 +1,9 @@
-#! /usr/bin/env python2
-# -*- coding: utf-8 -*-
+#! /usr/bin/env python
 
 import argparse
 from collections import defaultdict
 import json
-import math
+import lzma
 import sys
 import time
 
@@ -14,28 +13,34 @@ import numpy as np
 EPSILON = 0.0001 # Don't care about this little time.
 
 
+def read_properties(path):
+    open_func = lzma.open if path.endswith(".xz") else open
+    with open_func(path) as f:
+        return json.load(f)
+
+
 def dump_portfolio(track, configs, timeouts, results, **kwargs):
     outfile = kwargs.pop("outfile", None)
     if outfile:
         stdout = sys.stdout
         sys.stdout = open(outfile, "w")
 
-    print '"""'
+    print('"""')
     kwargs.setdefault("runtime", "{}s".format(sum(timeouts)))
     for key, value in sorted(kwargs.items()):
         if value is not None:
-            print "{}: {}".format(key.capitalize(), value)
-    print '"""'
-    print
-    print "TRACK = \"{}\"".format(track)
-    print "CONFIGS = ["
+            print("{}: {}".format(key.capitalize(), value))
+    print('"""')
+    print()
+    print("TRACK = \"{}\"".format(track))
+    print("CONFIGS = [")
 
     assert len(configs) == len(timeouts)
     for config, timeout in zip(configs, timeouts):
         if timeout > 0:
-            print "    # {}".format(config)
-            print "    ({}, {}),".format(timeout, results.config_to_options[config])
-    print "]"
+            print("    # {}".format(config))
+            print("    ({}, {}),".format(timeout, results.config_to_options[config]))
+    print("]")
 
     if outfile:
         sys.stdout.close()
@@ -74,10 +79,10 @@ class Results(object):
             data[config, problem] = (entry["time"], cost)
 
         for problem, all_costs in sorted(costs.items()):
-            print "{}: {} different costs from {} to {}".format(
-                problem, len(all_costs), min(all_costs), max(all_costs))
+            print("{}: {} different costs from {} to {}".format(
+                problem, len(all_costs), min(all_costs), max(all_costs)))
 
-        for (config, problem), (time, cost) in data.iteritems():
+        for (config, problem), (time, cost) in data.items():
             score = 0.
             if time is not None:
                 if track == "agl":
@@ -170,40 +175,40 @@ class Results(object):
         return np.sum(np.any(self.runtimes != np.inf, axis=1))
 
     def dump_statistics(self):
-        print len(self.problems), "problems"
-        print len(self.configs), "configs"
-        print len(self.configs) * len(self.problems), "results"
-        print self._total_solved(), "problems solved by someone"
+        print(len(self.problems), "problems")
+        print(len(self.configs), "configs")
+        print(len(self.configs) * len(self.problems), "results")
+        print(self._total_solved(), "problems solved by someone")
         max_num_solved = -1
         max_score = -1
         for c, config in enumerate(self.configs):
             num_solved = np.sum(self.runtimes[:,c] != np.inf)
-            print num_solved, "problems solved by", config
+            print(num_solved, "problems solved by", config)
             max_num_solved = max(max_num_solved, num_solved)
         for c, config in enumerate(self.configs):
             score = np.sum(self.scores[:,c])
-            print "%.2f" % score, "score by", config
+            print("%.2f" % score, "score by", config)
             max_score = max(max_score, score)
-        print "Max problems solved by single config:", max_num_solved
-        print "Max score by single config:", max_score
+        print("Max problems solved by single config:", max_num_solved)
+        print("Max score by single config:", max_score)
 
 
 class Portfolio(object):
     def __init__(self, results, timeouts):
         self.results = results
         self.timeouts = timeouts
-        self.configs = sorted(self.timeouts.iterkeys())
+        self.configs = sorted(self.timeouts.keys())
         self.timeouts_array = np.array([self.timeouts[config] for config in self.configs])
 
     def solves_problem(self, problem_id):
         solution_times = self.results.solution_times(problem_id)
-        for solver, time in solution_times.iteritems():
+        for solver, time in solution_times.items():
             if time < self.timeouts[solver] + EPSILON:
                 return True
         return False
 
     def total_timeout(self):
-        return sum(self.timeouts.itervalues())
+        return sum(self.timeouts.values())
 
     def num_solved(self):
         return sum(1 for p in range(len(self.results.problems))
@@ -247,7 +252,7 @@ class Portfolio(object):
                     break
 
     def dump_marginal_contributions(self):
-        print "Marginal contributions:"
+        print("Marginal contributions:")
         num_solved = self.num_solved()
         score = self.ipc_score()
         for config in self.configs:
@@ -257,17 +262,17 @@ class Portfolio(object):
                 succ = Portfolio(self.results, succ_timeouts)
                 num_lost = num_solved - succ.num_solved()
                 score_lost = score - succ.ipc_score()
-                print "   %3d problems / %.2f score from %s" % (num_lost,
-                        score_lost, config)
+                print("   %3d problems / %.2f score from %s" % (num_lost,
+                        score_lost, config))
 
     def dump(self):
-        print "portfolio for %.2f seconds solves %d problems with score %.2f:" % (
-            self.total_timeout(), self.num_solved(), self.ipc_score())
+        print("portfolio for %.2f seconds solves %d problems with score %.2f:" % (
+            self.total_timeout(), self.num_solved(), self.ipc_score()))
         for config in self.configs:
-            print "   %7.2f seconds for %s" % (self.timeouts[config], config)
+            print("   %7.2f seconds for %s" % (self.timeouts[config], config))
 
     def dump_unsolved(self):
-        print "Unsolved problems:"
+        print("Unsolved problems:")
         count = 0
         for p, problem in enumerate(self.results.problems):
             solution_times = self.results.solution_times(p)
@@ -275,15 +280,15 @@ class Portfolio(object):
                 formatted_solution_times = "{%s}" % ", ".join(
                     "%s: %.2f" % pair
                     for pair in sorted(solution_times.items()))
-                print "   %-35s %s" % (problem, formatted_solution_times)
+                print("   %-35s %s" % (problem, formatted_solution_times))
                 count += 1
-        print "(%d problems)" % count
+        print("(%d problems)" % count)
 
 def compute_portfolio_using_ipc_scores(results, granularity, timeout):
     portfolio = Portfolio(results, dict.fromkeys(results.configs, 0))
     while portfolio.total_timeout() + granularity <= timeout:
         portfolio.dump()
-        print
+        print()
 
         def score(portfolio):
             return portfolio.ipc_score()
@@ -296,7 +301,7 @@ def sort_configs_by_decreasing_coverage(configs, results):
     def get_coverage(c):
         return np.sum(results.scores[:,c] != 0)
 
-    sorted_indices = sorted(range(len(configs)), key=get_coverage, reverse=True)
+    sorted_indices = sorted(list(range(len(configs))), key=get_coverage, reverse=True)
     return [configs[c] for c in sorted_indices]
 
 def parse_args():
@@ -313,29 +318,28 @@ def parse_args():
 
 def main():
     args = parse_args()
-    with open(args.properties_file) as f:
-        props = json.load(f)
-    results = Results(props.values(), track=args.track, timeout=args.portfolio_time)
+    props = read_properties(args.properties_file)
+    results = Results(list(props.values()), track=args.track, timeout=args.portfolio_time)
     results.dump_statistics()
-    print "Computing portfolio using IPC scores..."
-    start_time = time.clock()
+    print("Computing portfolio using IPC scores...")
+    start_time = time.process_time()
     portfolio = compute_portfolio_using_ipc_scores(
         results, granularity=args.granularity, timeout=args.portfolio_time)
     portfolio.dump()
-    print
-    print "Time for computing portfolio: {}s".format(time.clock() - start_time)
-    print
-    print "Reducing portfolio..."
+    print()
+    print("Time for computing portfolio: {}s".format(time.process_time() - start_time))
+    print()
+    print("Reducing portfolio...")
     portfolio.reduce_score_based(granularity=1)
     portfolio.dump()
-    print
-    print "Final score: ", portfolio.ipc_score()
-    print
+    print()
+    print("Final score: ", portfolio.ipc_score())
+    print()
 
-    print "Configs:", sum(1 if time > 0 else 0 for time in portfolio.timeouts.values())
-    print "Min/max time:", min(val for val in portfolio.timeouts.values() if val > 0), max(portfolio.timeouts.values())
+    print("Configs:", sum(1 if time > 0 else 0 for time in list(portfolio.timeouts.values())))
+    print("Min/max time:", min(val for val in list(portfolio.timeouts.values()) if val > 0), max(portfolio.timeouts.values()))
 
-    print "Sort by decreasing coverage"
+    print("Sort by decreasing coverage")
     configs = sort_configs_by_decreasing_coverage(results.configs, results)
 
     dump_portfolio(
@@ -346,11 +350,11 @@ def main():
         granularity="{}s".format(args.granularity),
         coverage=portfolio.num_solved(),
         score=portfolio.ipc_score())
-    print
+    print()
     portfolio.dump_unsolved()
-    print
+    print()
     portfolio.dump_marginal_contributions()
-    print
+    print()
 
 
 if __name__ == "__main__":
