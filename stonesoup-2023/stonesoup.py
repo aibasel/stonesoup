@@ -333,11 +333,12 @@ def main():
     portfolio.reduce_score_based(granularity=1)
     portfolio.dump()
     print()
-    print("Final score: ", portfolio.ipc_score())
-    print()
-
-    print("Configs:", sum(1 if time > 0 else 0 for time in list(portfolio.timeouts.values())))
-    print("Min/max time:", min(val for val in list(portfolio.timeouts.values()) if val > 0), max(portfolio.timeouts.values()))
+    summary = {
+        "Final score": portfolio.ipc_score(),
+        "Configs": sum(1 if time > 0 else 0 for time in list(portfolio.timeouts.values())),
+        "Min time": min(val for val in list(portfolio.timeouts.values()) if val > 0),
+        "Max time": max(portfolio.timeouts.values()),
+    }
 
     print("Sort by decreasing coverage")
     configs = sort_configs_by_decreasing_coverage(results.configs, results)
@@ -355,6 +356,7 @@ def main():
     print()
     portfolio.dump_marginal_contributions()
     print()
+    print("    ".join(f"{key}: {value}" for key, value in summary.items()))
 
 
 if __name__ == "__main__":
