@@ -1,8 +1,8 @@
 This repository contains scripts for creating Fast Downward Stone Soup
 portfolios.
 
-You can find the Stone Soup portfolios that participated in IPC 2011 and
-IPC 2018 in the Fast Downward repository (www.fast-downward.org) under
+You can find the Stone Soup portfolios that participated in IPCs 2011, 2014 and
+2018 in the Fast Downward repository (www.fast-downward.org) under
 driver/portfolios/.
 
 The following article introduces the Stone Soup algorithm
