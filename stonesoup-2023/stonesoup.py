@@ -98,7 +98,7 @@ class Results(object):
                     else:
                         score = float(best_cost) / cost
                 elif track == "opt":
-                    assert cost == best_costs[problem]
+                    assert cost == best_costs[problem], (problem, config)
                     score = 1.
                 else:
                     assert False, track
